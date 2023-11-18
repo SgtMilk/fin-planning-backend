@@ -1,6 +1,10 @@
 package database
 
 import (
+	"errors"
+	"html"
+	"strings"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -38,35 +42,63 @@ func (user *User) Create() (*User, error) {
 	return user, nil
 }
 
+func (user *User) Delete() error{
+	// deleting attached optoins
+	err := user.Options.Delete()
+	if err != nil{
+		return err
+	}
+
+	// deleting attached monthly
+	var monthlyExpenses []MonthlyExpense
+	err = Database.Where("user_id = ?", user.ID).Find(&monthlyExpenses).Error
+	if err != nil{
+		return err
+	}
+
+	for _, monthlyExpense := range monthlyExpenses {
+		err = monthlyExpense.Delete()
+		if err != nil{
+			return err
+		}
+	}
+
+	err = Database.Delete(&user).Error
+	return err
+}
+
 func (user *User) ValidatePassword(password string) error {
     return bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 }
 
-func FindUserById(id uint) (User, error){
+func FindUserById(id uint) (*User, error){
 	var user User
-	err := Database.Where("id=?", id).Find(&user).Error
+	err := Database.Preload("Options").Where("id=?", id).Find(&user).Error
 
 	if err != nil{
-		return User{}, err
+		return &User{}, err
 	}
 
-	return user, nil
+	if user.ID == 0{
+		return &user, errors.New("User doesn't exist")
+	}
+
+	return &user, nil
 }
 
-func FindUserByUsername(username string) (User, error){
-	usernameHash, err := generateHash(username)
-	if err != nil {
-        return User{}, err
-    }
-
+func FindUserByUsername(username string) (*User, error){
 	var user User
-	err = Database.Where("username=?", usernameHash).Find(&user).Error
+	err := Database.Preload("Options").Where("username=?", username).Find(&user).Error
 
 	if err != nil{
-		return User{}, err
+		return &User{}, err
 	}
 
-	return user, nil
+	if user.ID == uint(0){
+		return &user, errors.New("User doesn't exist")
+	}
+ 
+	return &user, nil
 }
 
 
@@ -75,17 +107,12 @@ func FindUserByUsername(username string) (User, error){
 // ==============================================
 
 func (user *User) BeforeSave(*gorm.DB) error{
-	usernameHash, err := generateHash(user.Username)
-	if err != nil {
-        return err
-    }
-
-	passwordHash, err := generateHash(user.Password)
+	passwordHash, err := GenerateHash(user.Password)
 	if err != nil {
         return err
     }
     
-	user.Username = usernameHash
+	user.Username = html.EscapeString(strings.TrimSpace(user.Username))
     user.Password = passwordHash
     return nil
 }
@@ -94,7 +121,7 @@ func (user *User) BeforeSave(*gorm.DB) error{
 // 					HELPERS
 // ==============================================
 
-func generateHash(input string) (string, error){
+func GenerateHash(input string) (string, error){
 	hash, err := bcrypt.GenerateFromPassword([]byte(input), bcrypt.DefaultCost)
 	return string(hash), err
 }

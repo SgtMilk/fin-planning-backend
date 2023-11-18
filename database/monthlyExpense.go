@@ -23,3 +23,21 @@ type MonthlyExpense struct{
 	// has many relationship
 	Expenses []Expense `json:"expenses"`
 }
+
+func (monthlyExpense *MonthlyExpense) Delete() error{
+	var expenses []Expense
+	err := Database.Where("monthly_expense_id = ?", monthlyExpense.ID).Find(&expenses).Error
+	if err != nil{
+		return err
+	}
+
+	for _, expense := range expenses {
+		err = expense.Delete()
+		if err != nil{
+			return err
+		}
+	}
+
+	err = Database.Delete(&monthlyExpense).Error
+	return err
+}

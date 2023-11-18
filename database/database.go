@@ -34,7 +34,7 @@ func Connect(){
 
 	if err != nil{
 		panic(err)
-	}else{
-		fmt.Println("Successfully connected to database")
-	}
+	}// else{
+	// 	fmt.Println("Successfully connected to database")
+	// }
 }

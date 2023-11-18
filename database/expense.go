@@ -17,3 +17,8 @@ type Expense struct{
 	// to connect back from has many
 	MonthlyExpenseID uint `gorm:"not null" json:"monthlyExpenseID"`
 }
+
+func (expense *Expense) Delete() error{
+	err := Database.Delete(&expense).Error
+	return err
+}

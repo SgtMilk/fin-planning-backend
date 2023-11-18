@@ -15,7 +15,7 @@ import (
 
 var privateKey = []byte(os.Getenv("JWT_PRIVATE_KEY"))
 
-func GenerateJWT(user database.User) (string, error) {
+func GenerateJWT(user *database.User) (string, error) {
     tokenTTL, _ := strconv.Atoi(os.Getenv("TOKEN_TTL"))
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
         "id":  user.ID,
@@ -25,10 +25,10 @@ func GenerateJWT(user database.User) (string, error) {
     return token.SignedString(privateKey)
 }
 
-func GetCurrentUser(context *gin.Context) (database.User, error) {
+func GetCurrentUser(context *gin.Context) (*database.User, error) {
     err := ValidateJWT(context)
     if err != nil {
-        return database.User{}, err
+        return &database.User{}, err
     }
     token, _ := getToken(context)
     claims, _ := token.Claims.(jwt.MapClaims)
@@ -36,7 +36,7 @@ func GetCurrentUser(context *gin.Context) (database.User, error) {
 
     user, err := database.FindUserById(userId)
     if err != nil {
-        return database.User{}, err
+        return &database.User{}, err
     }
     return user, nil
 }

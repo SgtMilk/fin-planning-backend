@@ -12,3 +12,8 @@ type BalanceAttribute struct{
 	// to connect back from has many
 	OptionsID uint `gorm:"not null" json:"optionsID"`
 }
+
+func (balanceAttribute *BalanceAttribute) Delete() error{
+	err := Database.Delete(&balanceAttribute).Error
+	return err
+}

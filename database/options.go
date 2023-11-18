@@ -23,7 +23,7 @@ type Options struct{
 
 func CreateDefaultOptions() (*Options, error){
 	year, month, _ := time.Now().Date()
-	curMonth := int(month) + 1
+	curMonth := int(month)
 	curMonthString := strconv.Itoa(curMonth)
 	if curMonth < 10{
 		curMonthString = "0" + curMonthString
@@ -45,6 +45,19 @@ func CreateDefaultOptions() (*Options, error){
 }
 
 func (options *Options) Delete() error{
-	err := Database.Delete(options).Error
+	var balanceAttributes []BalanceAttribute
+	err := Database.Where("options_id = ?", options.ID).Find(&balanceAttributes).Error
+	if err != nil{
+		return err
+	}
+
+	for _, balanceAttribute := range balanceAttributes {
+		err = balanceAttribute.Delete()
+		if err != nil{
+			return err
+		}
+	}
+
+	err = Database.Delete(&options).Error
 	return err
 }

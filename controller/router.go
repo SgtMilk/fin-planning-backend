@@ -1,22 +1,25 @@
 package controller
 
 import (
-	"fmt"
-
 	"github.com/SgtMilk/fin-planning-backend/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-func ServeApplication() {
-    router := gin.Default()
+func CreateRouter(noLogger bool) *gin.Engine{
+    var router *gin.Engine
+    if noLogger{
+        router = gin.New()
+    } else{
+        router = gin.Default()
+    }
 
     publicRoutes := router.Group("/auth")
-    publicRoutes.POST("/createuser", CreateUser)
-    publicRoutes.POST("/authenticate", Authenticate)
+    publicRoutes.POST("/register", CreateUser)
+    publicRoutes.POST("/login", Authenticate)
 
     protectedRoutes := router.Group("/api")
     protectedRoutes.Use(middleware.JWTAuthMiddleware())
+    publicRoutes.DELETE("/closeaccount", Authenticate)
 
-    router.Run(":8000")
-    fmt.Println("Server running on port 8000")
+    return router
 }
