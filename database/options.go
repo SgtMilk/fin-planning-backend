@@ -1,9 +1,6 @@
 package database
 
 import (
-	"strconv"
-	"time"
-
 	"gorm.io/gorm"
 )
 
@@ -22,16 +19,9 @@ type Options struct{
 }
 
 func CreateDefaultOptions() (*Options, error){
-	year, month, _ := time.Now().Date()
-	curMonth := int(month)
-	curMonthString := strconv.Itoa(curMonth)
-	if curMonth < 10{
-		curMonthString = "0" + curMonthString
-	}
-
 	options := &Options{
-		StartMonth: strconv.Itoa(year) + "-" + curMonthString,
-		EndMonth: strconv.Itoa(year + 50) + "-" + curMonthString,
+		StartMonth: GetCurrentMonth(0),
+		EndMonth: GetCurrentMonth(50 * 12),
 		MonthInterval: 12,
 		Inflation: 4,
 		TaxRate: 50,
@@ -42,6 +32,11 @@ func CreateDefaultOptions() (*Options, error){
 		return &Options{}, err
 	}
 	return options, nil
+}
+
+func (options *Options) Update(key string, value string) error{
+	err := Database.Save(&options).Error
+	return err
 }
 
 func (options *Options) Delete() error{

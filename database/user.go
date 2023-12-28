@@ -5,6 +5,7 @@ import (
 	"html"
 	"strings"
 
+	passwordvalidator "github.com/wagslane/go-password-validator"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -40,6 +41,18 @@ func (user *User) Create() (*User, error) {
 		return &User{}, err
 	}
 	return user, nil
+}
+
+func (user *User) UpdatePassword(oldPassword string, newPassword string) error {
+	err := user.ValidatePassword(oldPassword)
+
+	if err != nil{
+		return err
+	}
+
+	err = Database.Model(&user).Update("password", newPassword).Error
+
+	return err
 }
 
 func (user *User) Delete() error{
@@ -107,6 +120,11 @@ func FindUserByUsername(username string) (*User, error){
 // ==============================================
 
 func (user *User) BeforeSave(*gorm.DB) error{
+	err := user.assertInput()
+	if err != nil {
+        return err
+    }
+
 	passwordHash, err := GenerateHash(user.Password)
 	if err != nil {
         return err
@@ -124,5 +142,26 @@ func (user *User) BeforeSave(*gorm.DB) error{
 func GenerateHash(input string) (string, error){
 	hash, err := bcrypt.GenerateFromPassword([]byte(input), bcrypt.DefaultCost)
 	return string(hash), err
+}
+
+func (user *User) assertInput() error{
+	// username 
+	usernameLengthCheck := len(user.Username) < 8 || len(user.Username) > 256
+	passwordLengthCheck := len(user.Password) < 8 || len(user.Password) > 72
+	if usernameLengthCheck && passwordLengthCheck{
+		return errors.New("username and password not of right size")
+	}else if usernameLengthCheck{
+		return errors.New("username not of right size")
+	}else if passwordLengthCheck{
+		return errors.New("password not of right size")
+	}
+
+	// strength evaluation
+	err := passwordvalidator.Validate(user.Username, 50)
+	if err != nil{
+		return errors.New("insecure username, try using a longer username")
+	}
+
+	return passwordvalidator.Validate(user.Password, 60)
 }
 

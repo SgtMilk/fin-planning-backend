@@ -24,6 +24,26 @@ type MonthlyExpense struct{
 	Expenses []Expense `json:"expenses"`
 }
 
+func CreateMonthlyExpense(userID uint, category string) (*MonthlyExpense, error){
+	monthlyExpense := &MonthlyExpense{
+		Title: "New Value",
+		StartMonth: GetCurrentMonth(0),
+		EndMonth: GetCurrentMonth(0),
+		CurrentValue: 0,
+		CPM: 0,
+		CIPY: 4,
+		IPY: 0,
+		IsTaxed: false,
+		IsEditable: true,
+		Category: category,
+		UserID: userID,
+	}
+
+	err := Database.Create(&monthlyExpense).Error
+
+	return monthlyExpense, err
+}
+
 func (monthlyExpense *MonthlyExpense) Delete() error{
 	var expenses []Expense
 	err := Database.Where("monthly_expense_id = ?", monthlyExpense.ID).Find(&expenses).Error
@@ -39,5 +59,14 @@ func (monthlyExpense *MonthlyExpense) Delete() error{
 	}
 
 	err = Database.Delete(&monthlyExpense).Error
+	return err
+}
+
+func (monthlyExpense *MonthlyExpense) AddExpenses(expenses []Expense) error{
+	for _, expense := range expenses {
+		expense.MonthlyExpenseID = monthlyExpense.ID
+	}
+
+	err := CreateExpenses(expenses)
 	return err
 }

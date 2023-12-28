@@ -19,7 +19,8 @@ func CreateRouter(noLogger bool) *gin.Engine{
 
     protectedRoutes := router.Group("/api")
     protectedRoutes.Use(middleware.JWTAuthMiddleware())
-    publicRoutes.DELETE("/closeaccount", Authenticate)
 
+    CreateUserRouter(protectedRoutes)
+    
     return router
 }
