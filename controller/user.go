@@ -18,85 +18,85 @@ type UpdatePasswordInput struct {
 	NewPassword string `json:"newPassword" binding:"required"`
 }
 
-func CreateUserRouter(router *gin.RouterGroup){
+func CreateUserRouter(router *gin.RouterGroup) {
 	userRoutes := router.Group("/user")
-    userRoutes.DELETE("/close_account", DeleteUser)
+	userRoutes.DELETE("/close_account", DeleteUser)
 	userRoutes.PUT("/update_password", UpdatePassword)
 }
 
-func CreateUser(context *gin.Context){
+func CreateUser(context *gin.Context) {
 	var input AuthenticateInput
 	err := context.ShouldBindJSON(&input)
-	if CheckError(context, err){
-        return
+	if CheckError(context, err) {
+		return
 	}
 
 	user := database.User{
-        Username: input.Username,
-        Password: input.Password,
-    }
-	_ , err = user.Create()
-	if CheckError(context, err){
+		Username: input.Username,
+		Password: input.Password,
+	}
+	_, err = user.Create()
+	if CheckError(context, err) {
 		return
 	}
 
 	context.JSON(http.StatusCreated, nil)
 }
 
-func DeleteUser(context *gin.Context){
+func DeleteUser(context *gin.Context) {
 	user, err := utils.GetCurrentUser(context)
-	if CheckError(context, err){
+	if CheckError(context, err) {
 		return
 	}
 
 	err = user.Delete()
-	if CheckError(context, err){
+	if CheckError(context, err) {
 		return
 	}
 
 	context.JSON(http.StatusOK, nil)
 }
 
-func UpdatePassword(context *gin.Context){
+func UpdatePassword(context *gin.Context) {
 	var input UpdatePasswordInput
 	err := context.ShouldBindJSON(&input)
-	if CheckError(context, err){
-        return
+	if CheckError(context, err) {
+		return
 	}
 
 	user, err := utils.GetCurrentUser(context)
-	if CheckError(context, err){
+	if CheckError(context, err) {
 		return
 	}
 
 	err = user.UpdatePassword(input.OldPassword, input.NewPassword)
-	if CheckError(context, err){
+	if CheckError(context, err) {
 		return
 	}
 
 	context.JSON(http.StatusOK, nil)
 }
 
-func Authenticate(context *gin.Context){
+func Authenticate(context *gin.Context) {
 	var input AuthenticateInput
 	err := context.ShouldBindJSON(&input)
-	if CheckError(context, err){
-        return
+	if CheckError(context, err) {
+		return
 	}
 
 	user, err := database.FindUserByUsername(input.Username)
-	if CheckError(context, err){
-        return
+	if CheckError(context, err) {
+		return
 	}
 
 	err = user.ValidatePassword(input.Password)
-	if CheckError(context, err){
-        return
+	if CheckError(context, err) {
+		return
 	}
 
 	jwt, err := utils.GenerateJWT(user)
-	if CheckError(context, err){
-        return
+	if CheckError(context, err) {
+		return
 	}
 
 	context.JSON(http.StatusOK, gin.H{"jwt": jwt})
