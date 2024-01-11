@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/SgtMilk/fin-planning-backend/database"
 	"github.com/SgtMilk/fin-planning-backend/utils"
@@ -11,11 +12,62 @@ import (
 
 func CreateMonthlyExpenseRouter(router *gin.RouterGroup) {
 	monthlyExpenseRoutes := router.Group("/monthly_expense")
+	monthlyExpenseRoutes.POST("/save", SaveMonthlyExpense)
 	monthlyExpenseRoutes.POST("/", CreateMonthlyExpense)
 	monthlyExpenseRoutes.DELETE("/:id", DeleteMonthlyExpense)
 	monthlyExpenseRoutes.PUT("/", UpdateMonthlyExpense)
 	monthlyExpenseRoutes.GET("/:id")
 	monthlyExpenseRoutes.GET("/")
+}
+
+// ==================================================================
+// 						CreateMonthlyExpense
+// ==================================================================
+
+func SaveMonthlyExpense(context *gin.Context) {
+	var inputs []database.MonthlyExpense
+	err := context.ShouldBindJSON(&inputs)
+	if CheckError(context, err) {
+		return
+	}
+
+	user, err := utils.GetCurrentUser(context)
+	if CheckError(context, err) {
+		return
+	}
+
+	// classifying incoming monthlyExpenses
+	var newMonthlyExpenses, oldMonthlyExpenses []database.MonthlyExpense
+	for _, monthlyExpense := range inputs {
+		if monthlyExpense.UserID != user.ID {
+			err := errors.New("monthly expense ID#" + strconv.FormatUint(uint64(monthlyExpense.ID), 10) + " does not belong to this user")
+			CheckError(context, err)
+			return
+		}
+
+		if monthlyExpense.ID == 0 {
+			newMonthlyExpenses = append(newMonthlyExpenses, monthlyExpense)
+		} else {
+			oldMonthlyExpenses = append(oldMonthlyExpenses, monthlyExpense)
+		}
+	}
+
+	err = database.CreateMonthlyExpenses(newMonthlyExpenses)
+	if CheckError(context, err) {
+		return
+	}
+
+	err = database.SaveMonthlyExpenses(oldMonthlyExpenses)
+	if CheckError(context, err) {
+		return
+	}
+
+	err = user.UpdateMonthlyExpenses(append(oldMonthlyExpenses, newMonthlyExpenses...))
+	if CheckError(context, err) {
+		return
+	}
+
+	context.JSON(http.StatusOK, nil)
 }
 
 // ==================================================================

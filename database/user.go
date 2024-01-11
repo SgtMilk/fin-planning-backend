@@ -55,6 +55,12 @@ func (user *User) UpdatePassword(oldPassword string, newPassword string) error {
 	return err
 }
 
+func (user *User) UpdateMonthlyExpenses(monthlyExpenses []MonthlyExpense) error {
+	user.MonthlyExpenses = monthlyExpenses
+	err := Database.Save(&user).Error
+	return err
+}
+
 func (user *User) Delete() error {
 	// deleting attached optoins
 	err := user.Options.Delete()

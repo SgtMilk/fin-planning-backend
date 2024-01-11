@@ -1,6 +1,12 @@
 package database
 
-import "gorm.io/gorm"
+import (
+	"errors"
+	"regexp"
+	"strings"
+
+	"gorm.io/gorm"
+)
 
 type MonthlyExpense struct {
 	gorm.Model
@@ -56,6 +62,14 @@ func CreateMonthlyExpense(userID uint, category string) (*MonthlyExpense, error)
 	return monthlyExpense, err
 }
 
+func CreateMonthlyExpenses(monthlyExpenses []MonthlyExpense) error {
+	return Database.Create(&monthlyExpenses).Error
+}
+
+func SaveMonthlyExpenses(monthlyExpenses []MonthlyExpense) error {
+	return Database.Save(&monthlyExpenses).Error
+}
+
 func (monthlyExpense *MonthlyExpense) Delete() error {
 	var expenses []Expense
 	err := Database.Where("monthly_expense_id = ?", monthlyExpense.ID).Find(&expenses).Error
@@ -92,4 +106,44 @@ func (monthlyExpense *MonthlyExpense) AddExpenses(expenses []Expense) error {
 
 	err := CreateExpenses(expenses)
 	return err
+}
+
+// ==============================================
+// 					HOOKS
+// ==============================================
+
+func (monthlyExpense *MonthlyExpense) BeforeSave(*gorm.DB) error {
+	return monthlyExpense.AssertInput()
+}
+
+// ==============================================
+// 					HELPERS
+// ==============================================
+
+func (monthlyExpense *MonthlyExpense) AssertInput() error {
+	// check if string lengths are right
+	for _, str := range [2]string{monthlyExpense.Title, monthlyExpense.Category} {
+		if len(str) > 64 {
+			return errors.New("input string is too long")
+		}
+	}
+
+	// check if dates are valid
+	r, err := regexp.Compile("^[0-9]{4}-[0-9]{2}$")
+	if err != nil {
+		return err
+	}
+
+	for _, date := range [2]string{monthlyExpense.StartMonth, monthlyExpense.EndMonth} {
+		matched := r.MatchString(date)
+		if !matched {
+			return errors.New("date has wrong format")
+		}
+	}
+
+	if strings.Compare(monthlyExpense.StartMonth, monthlyExpense.EndMonth) < 0 {
+		return errors.New("end month comes before start month")
+	}
+
+	return nil
 }
