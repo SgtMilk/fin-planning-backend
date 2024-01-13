@@ -31,13 +31,17 @@ func SaveMonthlyExpense(context *gin.Context) {
 		return
 	}
 
-	user, err := utils.GetCurrentUser(context)
+	userId, err := utils.GetCurrentUserId(context)
+	if CheckError(context, err) {
+		return
+	}
+	user, err := database.GetUserWithMontlyExpenses(userId)
 	if CheckError(context, err) {
 		return
 	}
 
 	// classifying incoming monthlyExpenses
-	var newMonthlyExpenses, oldMonthlyExpenses []database.MonthlyExpense
+	var newMonthlyExpenses, oldMonthlyExpenses, deletedMonthlyExpenses []database.MonthlyExpense
 	for _, monthlyExpense := range inputs {
 		if monthlyExpense.UserID != user.ID {
 			err := errors.New("monthly expense ID#" + strconv.FormatUint(uint64(monthlyExpense.ID), 10) + " does not belong to this user")
@@ -50,6 +54,17 @@ func SaveMonthlyExpense(context *gin.Context) {
 		} else {
 			oldMonthlyExpenses = append(oldMonthlyExpenses, monthlyExpense)
 		}
+	}
+
+	for _, oldMonthlyExpense := range user.MonthlyExpenses {
+		if !arrContains(inputs, oldMonthlyExpense.ID) {
+			deletedMonthlyExpenses = append(deletedMonthlyExpenses, oldMonthlyExpense)
+		}
+	}
+
+	err = database.DeleteMonthlyExpenses(deletedMonthlyExpenses)
+	if CheckError(context, err) {
+		return
 	}
 
 	err = database.CreateMonthlyExpenses(newMonthlyExpenses)
@@ -196,4 +211,17 @@ func GetAllMonthlyExpense(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusCreated, gin.H{"data": monthlyExpenses})
+}
+
+// ==================================================================
+// 								HELPERS
+// ==================================================================
+
+func arrContains(arr []database.MonthlyExpense, value uint) bool {
+	for _, val := range arr {
+		if val.ID == value {
+			return true
+		}
+	}
+	return false
 }

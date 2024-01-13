@@ -105,6 +105,21 @@ func FindUserById(id uint) (*User, error) {
 	return &user, nil
 }
 
+func GetUserWithMontlyExpenses(userId uint) (*User, error) {
+	var user User
+	err := Database.Preload("monthly_expenses").Where("user_id=?", userId).Find(&user).Error
+
+	if err != nil {
+		return &User{}, err
+	}
+
+	if user.ID == 0 {
+		return &user, errors.New("User doesn't exist")
+	}
+
+	return &user, nil
+}
+
 func FindUserByUsername(username string) (*User, error) {
 	var user User
 	err := Database.Preload("Options").Where("username=?", username).Find(&user).Error

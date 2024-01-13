@@ -88,6 +88,10 @@ func (monthlyExpense *MonthlyExpense) Delete() error {
 	return err
 }
 
+func DeleteMonthlyExpenses(monthlyExpenses []MonthlyExpense) error {
+	return Database.Delete(&monthlyExpenses).Error
+}
+
 func (monthlyExpense *MonthlyExpense) Update() error {
 	// checking if the monthly expense is owned by the user
 	_, err := GetMonthlyExpense(monthlyExpense.UserID, monthlyExpense.ID)
